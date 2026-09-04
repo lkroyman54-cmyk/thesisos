@@ -1,0 +1,17 @@
+services:
+  - type: web
+    name: thesisos
+    runtime: python
+    plan: free
+    buildCommand: echo "No dependencies to install"
+    startCommand: python3 server.py
+    healthCheckPath: /healthz
+    envVars:
+      - key: PYTHON_VERSION
+        value: 3.13.7
+      - key: OPENAI_API_KEY
+        sync: false
+      - key: SEC_USER_AGENT
+        sync: false
+      - key: OPENAI_MODEL
+        value: gpt-5-mini

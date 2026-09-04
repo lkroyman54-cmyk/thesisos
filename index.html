@@ -1,0 +1,237 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <meta name="theme-color" content="#f7f9fc"/>
+  <meta name="description" content="ThesisOS — AI-native investment research terminal for long-term investors."/>
+  <title>ThesisOS — Investment Intelligence</title>
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><rect width=%22100%22 height=%22100%22 rx=%2222%22 fill=%22%230b0f14%22/><text x=%2250%22 y=%2264%22 text-anchor=%22middle%22 font-size=%2250%22 font-family=%22Arial%22 font-weight=%22900%22 fill=%22%23b7ff5a%22>T</text></svg>">
+  <link rel="stylesheet" href="/styles.css?v=aurora-0830"/>
+</head>
+<body>
+  <div id="toastHost" class="toast-host" aria-live="polite"></div>
+
+  <header class="appbar">
+    <button class="brand" id="homeBtn" aria-label="ThesisOS home">
+      <span class="brand-mark">T</span>
+      <span class="brand-copy"><strong>THESIS<span>OS</span></strong><small>INVESTMENT INTELLIGENCE</small></span>
+    </button>
+    <nav class="mainnav" aria-label="Primary navigation">
+      <button class="nav-item active" data-view="dashboard">Watchtower</button>
+      <button class="nav-item" data-view="research">Research</button>
+      <button class="nav-item" data-view="library">Library</button>
+    </nav>
+    <div class="app-actions">
+      <span class="system-status"><i></i> SEC ONLINE</span>
+      <button class="icon-btn" id="commandBtn" title="Command palette (⌘K)">⌘K</button>
+      <button class="btn primary" id="addBtn">+ New thesis</button>
+    </div>
+  </header>
+
+  <main>
+    <section id="dashboardView" class="view active-view">
+      <div class="hero-shell">
+        <div class="hero-grid">
+          <div class="hero-copy">
+            <div class="overline"><span>AI-NATIVE INVESTMENT RESEARCH</span><b>LIVE</b></div>
+            <h1>Research with context.<br/><em>Invest with conviction.</em></h1>
+            <p>Start with any ticker. ThesisOS organizes primary-source evidence around the reason you care — then remembers the thesis and watches for material change.</p>
+
+            <form id="tickerCommand" class="ticker-command" autocomplete="off">
+              <div class="search-glyph">⌕</div>
+              <input id="quickTicker" maxlength="12" placeholder="Search ticker — GOOGL, RKLB, SOFI…" aria-label="Search ticker"/>
+              <span class="key-hint">ENTER</span>
+              <button type="submit" class="command-open">Open research</button>
+            </form>
+            <div class="hero-hints"><span>FINANCIALS</span><span>10-K / 10-Q / 8-K</span><span>FORM 4 INSIDERS</span><span>THESIS MEMORY</span><span>PRIMARY SOURCES</span></div>
+          </div>
+
+          <aside class="portfolio-panel">
+            <div class="panel-top"><span>PORTFOLIO SIGNAL</span><span class="live-label">● LIVE</span></div>
+            <div class="health-row">
+              <div><small>THESIS HEALTH</small><strong id="portfolioScore">—</strong></div>
+              <div class="signal-orb"><span id="orbValue">0</span></div>
+            </div>
+            <p id="portfolioCaption">Initialize your first thesis.</p>
+            <div class="metric-grid">
+              <div><small>ACTIVE THESES</small><strong id="activeCount">0</strong></div>
+              <div><small>CHANGED</small><strong id="changedCount">0</strong></div>
+              <div><small>LAST CHECK</small><strong id="lastPortfolioCheck">—</strong></div>
+              <div><small>DATA</small><strong class="accent">EDGAR</strong></div>
+            </div>
+          </aside>
+        </div>
+      </div>
+
+      <div class="ticker-strip"><span>THESISOS / RESEARCH THAT REMEMBERS</span><b>•</b><span>SEC FILINGS</span><b>•</b><span>FINANCIAL STATEMENTS</span><b>•</b><span>INSIDER FILINGS</span><b>•</b><span>MANAGEMENT LANGUAGE</span><b>•</b><span>CATALYSTS</span><b>•</b><span>RISK CONDITIONS</span><b>•</b><span>CONVICTION HISTORY</span></div>
+
+      <section class="workspace">
+        <div class="workspace-head">
+          <div>
+            <p class="eyebrow">WATCHTOWER</p>
+            <h2>Your investment workspace</h2>
+            <p>A calm, focused workspace for the companies you actually follow — with primary sources, thesis memory, and material-change monitoring.</p>
+          </div>
+          <div class="head-actions">
+            <div class="filters" role="tablist">
+              <button class="chip active" data-filter="all">All</button>
+              <button class="chip" data-filter="changed">Changed</button>
+              <button class="chip" data-filter="healthy">Intact</button>
+            </div>
+            <button class="btn secondary" id="exportBtn">Export</button>
+          </div>
+        </div>
+
+        <section id="emptyState" class="empty-state">
+          <div class="empty-radar"><span></span></div>
+          <div>
+            <p class="eyebrow">NO ACTIVE THESES</p>
+            <h3>Start with one company you actually care about.</h3>
+            <p>Search the ticker first. Review the latest filings. Save a thesis only if it belongs on your watchtower.</p>
+            <button class="btn primary" id="emptyResearchBtn">Research a ticker</button>
+          </div>
+        </section>
+        <section id="cards" class="cards"></section>
+      </section>
+
+      <section class="principles">
+        <div class="principle-intro">
+          <p class="eyebrow">DESIGNED TO GET QUIETER</p>
+          <h2>Built for clarity, not screen time.</h2>
+          <p>ThesisOS keeps research organized and gets quieter when nothing important has changed.</p>
+        </div>
+        <div class="principle-grid">
+          <article><span>01</span><h3>Research instantly</h3><p>Open a ticker without creating anything first.</p></article>
+          <article><span>02</span><h3>Save your reasoning</h3><p>Capture the thesis and explicit failure conditions.</p></article>
+          <article><span>03</span><h3>Monitor evidence</h3><p>Compare new filings against what you believed before.</p></article>
+          <article><span>04</span><h3>Act on signal</h3><p>Stronger, unchanged, weaker, or broken — with sources.</p></article>
+        </div>
+      </section>
+    </section>
+
+    <section id="researchView" class="view">
+      <div class="research-shell">
+        <div class="research-toolbar">
+          <button class="back-btn" id="backBtn">← Watchtower</button>
+          <form id="researchSearch" class="compact-search"><span>⌕</span><input id="researchTicker" maxlength="12" placeholder="Ticker"/><button>Go</button></form>
+          <div class="research-actions"><button class="btn secondary" id="refreshResearchBtn">Refresh</button><button class="btn primary" id="saveThesisFromResearch">Save thesis</button></div>
+        </div>
+
+        <div id="researchEmpty" class="research-empty">
+          <p class="eyebrow">RESEARCH WORKSPACE</p>
+          <h2>Open any SEC-reporting ticker.</h2>
+          <p>Start with the evidence. Save the thesis later.</p>
+        </div>
+
+        <div id="researchLoading" class="research-loading hidden">
+          <div class="skeleton hero-skeleton"></div><div class="skeleton"></div><div class="skeleton"></div>
+        </div>
+
+        <div id="researchContent" class="research-content hidden">
+          <div class="security-header">
+            <div>
+              <div class="security-kicker"><span id="researchTickerLabel">—</span><span class="source-pill">SEC PRIMARY SOURCE</span></div>
+              <h1 id="researchCompany">—</h1>
+              <p id="researchMeta">—</p>
+            </div>
+            <div class="security-stat"><small>MATERIAL FILINGS</small><strong id="researchFilingCount">0</strong><span>latest set</span></div>
+          </div>
+
+          <section class="company-overview card-panel">
+            <div class="overview-head">
+              <div><p class="eyebrow">COMPANY SNAPSHOT</p><h2>Fundamentals at a glance</h2></div>
+              <div id="profileChips" class="profile-chips"></div>
+            </div>
+            <div id="metricCards" class="metric-cards"></div>
+          </section>
+
+          <section class="market-intel card-panel">
+            <div class="section-title"><div><p class="eyebrow">MARKET SITUATION</p><h2>Where the security sits now</h2></div><span id="marketSource" class="subtle">loading delayed market data…</span></div>
+            <div id="marketCards" class="market-cards"><div class="skeleton slim"></div></div>
+            <div id="marketNarrative" class="market-narrative">Price context helps separate a meaningful filing from a filing the market barely reacted to. ThesisOS never assumes reaction equals causation.</div>
+          </section>
+
+          <div class="research-grid">
+            <section class="research-main card-panel filing-intel-panel">
+              <div class="section-title"><div><p class="eyebrow">FILING INTELLIGENCE</p><h2>Dissect every material filing</h2></div><div class="filing-tools"><span id="researchUpdated" class="subtle">—</span><button id="deepScanBtn" class="btn mini-primary">Deep scan recent</button></div></div>
+              <p class="section-copy">Open the source or dissect it into what happened, why it matters, capital structure, management signal, market reaction, risks, catalysts and thesis impact.</p>
+              <div id="deepScanStatus" class="scan-status hidden"></div>
+              <div id="filingList" class="filing-list intel-list"></div>
+            </section>
+
+            <section class="research-main card-panel insider-panel">
+              <div class="section-title"><div><p class="eyebrow">INSIDER ACTIVITY</p><h2>Recent Form 4 filings</h2></div><span class="subtle">SEC ownership filings</span></div>
+              <div id="insiderList" class="filing-list"></div>
+            </section>
+
+            <aside class="research-side">
+              <section class="card-panel quick-panel">
+                <p class="eyebrow">WORKSPACE</p>
+                <h3>What do you want to do?</h3>
+                <button class="utility-action" id="utilitySave"><span>＋</span><div><strong>Create thesis</strong><small>Save why you own it and what breaks it.</small></div><b>→</b></button>
+                <button class="utility-action" id="utilityCopy"><span>⌘</span><div><strong>Copy research brief</strong><small>Copy ticker + latest filings for Claude or your group.</small></div><b>→</b></button>
+                <button class="utility-action" id="utilityOpenLatest"><span>↗</span><div><strong>Open latest filing</strong><small>Jump directly to the primary SEC source.</small></div><b>→</b></button>
+              </section>
+
+              <section class="card-panel thesis-status-panel">
+                <div class="section-title"><div><p class="eyebrow">THESIS STATUS</p><h3 id="existingThesisTitle">Not saved</h3></div><span id="existingThesisScore" class="mini-score">—</span></div>
+                <p id="existingThesisText">Create a thesis when this company earns a place on your watchtower.</p>
+                <button class="btn secondary wide" id="existingThesisAction">Create thesis</button>
+              </section>
+            </aside>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section id="libraryView" class="view">
+      <div class="library-shell">
+        <p class="eyebrow">LOCAL LIBRARY</p>
+        <h1>Your research memory.</h1>
+        <p class="library-copy">Thesis cards are stored locally in this browser for the MVP. Export a backup anytime.</p>
+        <div class="library-actions"><button class="btn primary" id="libraryExportBtn">Export JSON</button><label class="btn secondary import-label">Import JSON<input id="importFile" type="file" accept="application/json" hidden/></label></div>
+        <div id="libraryList" class="library-list"></div>
+      </div>
+    </section>
+  </main>
+
+  <div id="thesisModal" class="modal hidden" role="dialog" aria-modal="true" aria-labelledby="thesisModalTitle">
+    <div class="modal-card thesis-modal-card">
+      <div class="modal-head"><div><p class="eyebrow">THESIS FILE</p><h2 id="thesisModalTitle">Define what must be true.</h2></div><button class="modal-close" data-close="thesisModal">×</button></div>
+      <form id="thesisForm">
+        <input id="editingId" type="hidden"/>
+        <div class="grid2">
+          <label>Ticker<input id="ticker" required maxlength="12" placeholder="GOOGL"/></label>
+          <label>Company<input id="company" placeholder="Alphabet Inc."/></label>
+        </div>
+        <label>Why do you own it?<span class="field-help">One reason per line works best.</span><textarea id="thesis" required rows="6" placeholder="AI becomes a durable earnings engine.\nCloud margins continue expanding.\nSearch remains structurally dominant."></textarea></label>
+        <label>What breaks the thesis?<span class="field-help">Write explicit evidence that would make you reconsider.</span><textarea id="breakers" rows="5" placeholder="Search share materially deteriorates.\nAI capex fails to produce acceptable returns."></textarea></label>
+        <label>Starting conviction <span class="conviction-readout"><strong id="convictionValue">80</strong>/100</span><input id="conviction" class="range" type="range" min="0" max="100" value="80"/></label>
+        <div class="modal-actions"><button type="button" class="btn secondary" data-close="thesisModal">Cancel</button><button class="btn primary" type="submit">Save thesis</button></div>
+      </form>
+    </div>
+  </div>
+
+  <div id="analysisModal" class="modal hidden" role="dialog" aria-modal="true">
+    <div class="modal-card analysis-card">
+      <div class="modal-head"><div><p class="eyebrow">THESIS INTELLIGENCE</p><h2 id="analysisTitle">Evidence check</h2></div><button class="modal-close" data-close="analysisModal">×</button></div>
+      <div id="analysisContent"></div>
+    </div>
+  </div>
+
+  <div id="commandPalette" class="modal command-modal hidden" role="dialog" aria-modal="true">
+    <div class="command-palette">
+      <div class="palette-search"><span>⌕</span><input id="paletteInput" placeholder="Search ticker or command…" autocomplete="off"/><kbd>ESC</kbd></div>
+      <div class="palette-label">QUICK ACTIONS</div>
+      <button class="palette-item" data-command="research"><span>⌕</span><div><strong>Research ticker</strong><small>Open SEC evidence workspace</small></div><kbd>R</kbd></button>
+      <button class="palette-item" data-command="new"><span>＋</span><div><strong>New thesis</strong><small>Create an investment thesis file</small></div><kbd>N</kbd></button>
+      <button class="palette-item" data-command="export"><span>⇩</span><div><strong>Export library</strong><small>Download a JSON backup</small></div><kbd>E</kbd></button>
+      <div id="paletteRecent" class="palette-recent"></div>
+    </div>
+  </div>
+
+  <footer><span>THESISOS / PRIVATE RESEARCH SYSTEM</span><span>RESEARCH SOFTWARE · NOT INVESTMENT ADVICE</span></footer>
+  <script src="/app.js?v=aurora-0830"></script>
+</body>
+</html>
