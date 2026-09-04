@@ -7,7 +7,7 @@
   <meta name="description" content="ThesisOS — AI-native investment research terminal for long-term investors."/>
   <title>ThesisOS — Investment Intelligence</title>
   <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><rect width=%22100%22 height=%22100%22 rx=%2222%22 fill=%22%230b0f14%22/><text x=%2250%22 y=%2264%22 text-anchor=%22middle%22 font-size=%2250%22 font-family=%22Arial%22 font-weight=%22900%22 fill=%22%23b7ff5a%22>T</text></svg>">
-  <link rel="stylesheet" href="/styles.css?v=aurora-0830"/>
+  <link rel="stylesheet" href="/styles.css?v=memory-v2"/>
 </head>
 <body>
   <div id="toastHost" class="toast-host" aria-live="polite"></div>
@@ -179,6 +179,12 @@
                 <p id="existingThesisText">Create a thesis when this company earns a place on your watchtower.</p>
                 <button class="btn secondary wide" id="existingThesisAction">Create thesis</button>
               </section>
+
+              <section id="timelinePanel" class="card-panel timeline-panel hidden">
+                <div class="section-title"><div><p class="eyebrow">THESIS MEMORY</p><h3>Event timeline</h3></div><span class="memory-pill">persistent</span></div>
+                <p class="timeline-copy">A chronological record of thesis edits, AI checks, and filing-level events. This is the memory layer.</p>
+                <div id="timelineList" class="timeline-list"></div>
+              </section>
             </aside>
           </div>
         </div>
@@ -232,6 +238,6 @@
   </div>
 
   <footer><span>THESISOS / PRIVATE RESEARCH SYSTEM</span><span>RESEARCH SOFTWARE · NOT INVESTMENT ADVICE</span></footer>
-  <script src="/app.js?v=aurora-0830"></script>
+  <script src="/app.js?v=memory-v2"></script>
 </body>
 </html>

@@ -22,6 +22,24 @@ function loadInvestments(){
 function save(){ localStorage.setItem(STORAGE_KEY, JSON.stringify(investments)); renderAll(); }
 function nowISO(){ return new Date().toISOString(); }
 function fmtTime(iso){ if(!iso) return "Never"; const d=new Date(iso); const mins=Math.floor((Date.now()-d.getTime())/60000); if(mins<1) return "Just now"; if(mins<60) return `${mins}m ago`; const h=Math.floor(mins/60); if(h<24) return `${h}h ago`; const days=Math.floor(h/24); if(days<7) return `${days}d ago`; return d.toLocaleDateString(); }
+function ensureHistory(x){ if(!Array.isArray(x.history)) x.history=[]; return x.history; }
+function historyEvent(x,event){
+  const h=ensureHistory(x);
+  if(event.key && h.some(e=>e.key===event.key)) return false;
+  h.unshift({id:crypto.randomUUID(),createdAt:nowISO(),...event});
+  x.history=h.slice(0,120);
+  return true;
+}
+function impactClass(v=""){ const s=String(v).toUpperCase(); return s==="STRONGER"?"stronger":s==="WEAKER"?"weaker":s==="BROKEN"?"broken":"unchanged"; }
+function historyHtml(x,limit=8){
+  const h=ensureHistory(x).slice(0,limit);
+  if(!h.length) return `<div class="timeline-empty">No thesis events yet. Run a thesis check or dissect a filing.</div>`;
+  return h.map(e=>{
+    const delta=(Number.isFinite(Number(e.scoreBefore))&&Number.isFinite(Number(e.scoreAfter))&&Number(e.scoreBefore)!==Number(e.scoreAfter))?`<span class="timeline-score">${Number(e.scoreBefore)} → ${Number(e.scoreAfter)}</span>`:"";
+    const src=e.sourceUrl?`<a href="${esc(e.sourceUrl)}" target="_blank" rel="noreferrer">Source ↗</a>`:"";
+    return `<article class="timeline-event ${impactClass(e.impact)}"><div class="timeline-dot"></div><div class="timeline-body"><div class="timeline-top"><span class="timeline-impact">${esc((e.impact||e.type||"UPDATE").replaceAll("_"," "))}</span><time>${esc(fmtTime(e.createdAt))}</time></div><strong>${esc(e.title||"Thesis update")}</strong><p>${esc(e.summary||"")}</p><div class="timeline-meta">${delta}${e.form?`<span>${esc(e.form)}</span>`:""}${src}</div></div></article>`;
+  }).join("");
+}
 function toast(message, label="THESISOS"){
   const el=document.createElement("div"); el.className="toast"; el.innerHTML=`<strong>${esc(label)}</strong>${esc(message)}`; $("toastHost").appendChild(el);
   setTimeout(()=>el.remove(), 3300);
@@ -109,7 +127,26 @@ async function loadMarketContext(ticker){
 }
 function reactionHtml(r){ if(!r)return `<span class="reaction neutral">reaction unavailable</span>`; return `<span class="reaction ${Number(r.fiveDayPct)>=0?"positive":"negative"}">1D ${esc(pct(r.oneDayPct))} · 3D ${esc(pct(r.threeDayPct))} · 5D ${esc(pct(r.fiveDayPct))}</span>`; }
 function intelBody(a){ const risks=a.risks||[],cats=a.catalysts||[],watch=a.watch_next||[],nums=a.key_numbers||[]; return `<div class="intel-summary"><div><span class="materiality ${esc(String(a.materiality||"MEDIUM").toLowerCase())}">${esc(a.materiality||"MEDIUM")}</span><span class="thesis-impact">${esc((a.thesis_impact||"NEEDS REVIEW").replaceAll("_"," "))}</span></div><h3>${esc(a.headline||"Filing intelligence")}</h3><p>${esc(a.plain_english||"")}</p></div><div class="intel-grid"><div><small>WHY IT MATTERS</small><p>${esc(a.why_it_matters||"—")}</p></div><div><small>MARKET CONTEXT</small><p>${esc(a.market_context||"—")}</p>${reactionHtml(a.reaction)}</div><div><small>MANAGEMENT SIGNAL</small><p>${esc(a.management_signal||"—")}</p></div><div><small>CAPITAL STRUCTURE</small><p>${esc(a.capital_structure||"—")}</p></div></div>${nums.length?`<div class="intel-tags"><small>KEY NUMBERS</small>${nums.map(v=>`<span>${esc(v)}</span>`).join("")}</div>`:""}<div class="intel-columns"><div><small>RISKS</small>${risks.length?risks.map(v=>`<p>− ${esc(v)}</p>`).join(""):`<p>No new material risk identified.</p>`}</div><div><small>CATALYSTS</small>${cats.length?cats.map(v=>`<p>+ ${esc(v)}</p>`).join(""):`<p>No explicit catalyst identified.</p>`}</div><div><small>WATCH NEXT</small>${watch.map(v=>`<p>→ ${esc(v)}</p>`).join("")||`<p>Monitor next primary-source update.</p>`}</div></div>`; }
-async function analyzeFiling(index,quiet=false){ const f=currentResearch?.filings?.[index]; if(!f)return; const box=$(`intel-${index}`),btn=$(`analyze-${index}`); if(box){box.classList.remove("hidden");box.innerHTML='<div class="intel-loading"><span></span> Reading the full filing and building context…</div>';} if(btn)btn.disabled=true; const saved=investments.find(x=>x.ticker===currentResearch.ticker); try{ const r=await fetch('/api/filing-intel',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({ticker:currentResearch.ticker,filing:f,thesis:saved?.thesis||'',breakers:saved?.breakers||'',market:currentResearch.market||null})}); const out=await r.json(); if(!r.ok)throw new Error(out.error||'Filing analysis failed'); if(box)box.innerHTML=intelBody(out.analysis); if(btn)btn.textContent='Refresh analysis'; if(!quiet)toast(`${f.form} dissected.`,out.ai?'AI INTELLIGENCE':'RULE SCAN'); return true;}catch(e){if(box)box.innerHTML=`<div class="intel-error">${esc(e.message)}</div>`;if(!quiet)toast(e.message,'ERROR');return false;}finally{if(btn)btn.disabled=false;} }
+async function analyzeFiling(index,quiet=false){
+  const f=currentResearch?.filings?.[index]; if(!f)return;
+  const box=$(`intel-${index}`),btn=$(`analyze-${index}`);
+  if(box){box.classList.remove("hidden");box.innerHTML='<div class="intel-loading"><span></span> Reading the full filing and building context…</div>';}
+  if(btn)btn.disabled=true;
+  const saved=investments.find(x=>x.ticker===currentResearch.ticker);
+  try{
+    const r=await fetch('/api/filing-intel',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({ticker:currentResearch.ticker,filing:f,thesis:saved?.thesis||'',breakers:saved?.breakers||'',market:currentResearch.market||null})});
+    const out=await r.json(); if(!r.ok)throw new Error(out.error||'Filing analysis failed');
+    filingIntel[f.accessionNumber||String(index)]=out.analysis;
+    if(box)box.innerHTML=intelBody(out.analysis); if(btn)btn.textContent='Refresh analysis';
+    if(saved){
+      const a=out.analysis||{};
+      const impact=String(a.thesis_impact||'UNCHANGED').toUpperCase();
+      const added=historyEvent(saved,{key:`filing:${f.accessionNumber||f.url}`,type:'FILING',impact,title:a.headline||`${f.form} filing dissected`,summary:a.plain_english||a.why_it_matters||'Material filing analyzed.',form:f.form,filingDate:f.filingDate,sourceUrl:f.url,materiality:a.materiality||'MEDIUM'});
+      if(added){ saved.updatedAt=nowISO(); localStorage.setItem(STORAGE_KEY,JSON.stringify(investments)); renderResearch(currentResearch); renderDashboard(); }
+    }
+    if(!quiet)toast(`${f.form} dissected.`,out.ai?'AI INTELLIGENCE':'RULE SCAN'); return true;
+  }catch(e){if(box)box.innerHTML=`<div class="intel-error">${esc(e.message)}</div>`;if(!quiet)toast(e.message,'ERROR');return false;}finally{if(btn)btn.disabled=false;}
+}
 async function deepScanFilings(){ const files=(currentResearch?.filings||[]).slice(0,8); if(!files.length)return; const btn=$("deepScanBtn"),status=$("deepScanStatus");btn.disabled=true;status.classList.remove("hidden");let ok=0;for(let i=0;i<files.length;i++){status.textContent=`Deep scan ${i+1}/${files.length} · ${files[i].form} filed ${files[i].filingDate}`;if(await analyzeFiling(i,true))ok++;}status.textContent=`Deep scan complete · ${ok}/${files.length} filings dissected.`;btn.disabled=false;toast(`${ok} filings dissected.`,'DEEP SCAN');}
 
 function renderResearch(data){
@@ -125,11 +162,14 @@ function renderResearch(data){
   $("filingList").innerHTML=filings.length ? filings.map((f,i)=>`<article class="filing-intel-row"><div class="filing-row"><span class="form-badge">${esc(f.form)}</span><span class="filing-date">${esc(f.filingDate)}</span><div class="filing-doc"><strong>${i===0?"Latest material filing":esc(f.primaryDocument||"SEC filing")}</strong><small>Report date ${esc(f.reportDate||"—")} · accession ${esc(f.accessionNumber||"—")}</small></div><div class="filing-actions"><button class="analyze-link" id="analyze-${i}" onclick="analyzeFiling(${i})">Dissect</button><a class="open-link" href="${esc(f.url)}" target="_blank" rel="noreferrer">Source ↗</a></div></div><div id="intel-${i}" class="filing-analysis hidden"></div></article>`).join("") : `<div class="evidence-item">No recent material SEC filings found.</div>`;
   const existing=investments.find(x=>x.ticker===data.ticker);
   if(existing){
+    ensureHistory(existing);
     $("existingThesisTitle").textContent=existing.statusText||"Thesis saved"; $("existingThesisScore").textContent=existing.score; $("existingThesisText").textContent=lines(existing.thesis)[0]||"Saved thesis";
     $("existingThesisAction").textContent="Open thesis"; $("saveThesisFromResearch").textContent="Open thesis";
+    $("timelinePanel").classList.remove("hidden"); $("timelineList").innerHTML=historyHtml(existing,10);
   }else{
     $("existingThesisTitle").textContent="Not saved"; $("existingThesisScore").textContent="—"; $("existingThesisText").textContent="Create a thesis when this company earns a place on your watchtower.";
     $("existingThesisAction").textContent="Create thesis"; $("saveThesisFromResearch").textContent="Save thesis";
+    $("timelinePanel").classList.add("hidden"); $("timelineList").innerHTML="";
   }
 }
 function researchToThesis(){
@@ -175,6 +215,7 @@ function viewThesis(id){
   $("analysisContent").innerHTML=`<div class="analysis-summary"><div class="analysis-verdict">${esc(x.statusText||"THESIS SAVED")}</div><p>${esc(x.company||x.ticker)} · conviction ${x.score}/100</p></div>
   <div class="analysis-grid"><section class="analysis-section"><h4>Why I own it</h4>${lines(x.thesis).map(v=>`<div class="evidence-item">${esc(v)}</div>`).join("")}</section><section class="analysis-section"><h4>What breaks it</h4>${(lines(x.breakers).length?lines(x.breakers):["No thesis breakers defined."]).map(v=>`<div class="evidence-item">${esc(v)}</div>`).join("")}</section></div>
   ${x.lastAnalysis?`<section class="analysis-section" style="margin-top:10px"><h4>Last AI read</h4><div class="evidence-item">${esc(x.lastAnalysis.summary||"")}</div></section>`:""}
+  <section class="analysis-section" style="margin-top:10px"><h4>Thesis event timeline</h4><div class="timeline-list modal-timeline">${historyHtml(x,12)}</div></section>
   <div class="modal-actions"><button class="btn secondary" onclick="removeThesis('${x.id}')">Delete</button><button class="btn secondary" onclick="closeModal('analysisModal');editThesis('${x.id}')">Edit thesis</button><button class="btn primary" onclick="closeModal('analysisModal');checkThesis('${x.id}')">Check evidence</button></div>`;
   openModal("analysisModal");
 }
@@ -192,8 +233,8 @@ async function checkThesis(id){
     const result=await analysisResp.json(); if(!analysisResp.ok) throw new Error(result.error||"Analysis failed.");
     x.lastChecked=nowISO();
     if(result.ai){
-      const a=result.analysis||{}; const verdict=String(a.verdict||"UNCHANGED").toUpperCase(); x.score=Math.max(0,Math.min(100,Number(a.score??x.score))); x.status=verdict==="BROKEN"?"bad":verdict==="WEAKER"?"changed":"healthy"; x.statusText=verdict==="STRONGER"?"Thesis strengthened":verdict==="WEAKER"?"Material change":verdict==="BROKEN"?"Thesis at risk":"Thesis intact"; x.lastAnalysis=a; showAIAnalysis(x,a,sec.filings);
-    }else{ x.status="healthy"; x.statusText="Filings checked"; showNoAI(x,sec.filings,result.message); }
+      const a=result.analysis||{}; const verdict=String(a.verdict||"UNCHANGED").toUpperCase(); const scoreBefore=Number(x.score||0); x.score=Math.max(0,Math.min(100,Number(a.score??x.score))); x.status=verdict==="BROKEN"?"bad":verdict==="WEAKER"?"changed":"healthy"; x.statusText=verdict==="STRONGER"?"Thesis strengthened":verdict==="WEAKER"?"Material change":verdict==="BROKEN"?"Thesis at risk":"Thesis intact"; x.lastAnalysis=a; historyEvent(x,{type:'THESIS_CHECK',impact:verdict,title:`Thesis check · ${verdict}`,summary:a.summary||'Latest primary-source evidence compared with the saved thesis.',scoreBefore,scoreAfter:Number(x.score),sourceUrl:sec.filings?.[0]?.url||null}); showAIAnalysis(x,a,sec.filings);
+    }else{ x.status="healthy"; x.statusText="Filings checked"; historyEvent(x,{type:'THESIS_CHECK',impact:'UNCHANGED',title:'Evidence check completed',summary:result.message||'SEC evidence retrieved; AI thesis interpretation was unavailable.'}); showNoAI(x,sec.filings,result.message); }
     save();
   }catch(err){ $("analysisContent").innerHTML=`<div class="analysis-summary"><div class="analysis-verdict broken">CHECK FAILED</div><p>${esc(err.message)}</p></div>`; }
 }
@@ -208,7 +249,7 @@ function showAIAnalysis(x,a,filings){
 }
 
 function exportLibrary(){
-  const payload={product:"ThesisOS",version:2,exportedAt:nowISO(),investments}; const blob=new Blob([JSON.stringify(payload,null,2)],{type:"application/json"}); const url=URL.createObjectURL(blob); const a=document.createElement("a"); a.href=url; a.download=`thesisos-library-${new Date().toISOString().slice(0,10)}.json`; a.click(); URL.revokeObjectURL(url); toast("Research library exported.","BACKUP");
+  const payload={product:"ThesisOS",version:3,exportedAt:nowISO(),investments}; const blob=new Blob([JSON.stringify(payload,null,2)],{type:"application/json"}); const url=URL.createObjectURL(blob); const a=document.createElement("a"); a.href=url; a.download=`thesisos-library-${new Date().toISOString().slice(0,10)}.json`; a.click(); URL.revokeObjectURL(url); toast("Research library exported.","BACKUP");
 }
 function importLibrary(file){
   const reader=new FileReader(); reader.onload=()=>{ try{ const parsed=JSON.parse(reader.result); const list=Array.isArray(parsed)?parsed:parsed.investments; if(!Array.isArray(list)) throw new Error("No ThesisOS investments found."); investments=list; save(); toast(`${list.length} thesis files imported.`,"IMPORT"); }catch(e){toast(e.message,"ERROR");}}; reader.readAsText(file);
@@ -229,7 +270,7 @@ $("deepScanBtn").onclick=deepScanFilings;
 $("saveThesisFromResearch").onclick=researchToThesis; $("utilitySave").onclick=researchToThesis; $("existingThesisAction").onclick=researchToThesis; $("utilityCopy").onclick=copyResearchBrief;
 $("utilityOpenLatest").onclick=()=>{ const f=currentResearch?.filings?.[0]; if(f) window.open(f.url,"_blank","noopener"); else toast("No filing available."); };
 $("conviction").oninput=e=>$("convictionValue").textContent=e.target.value;
-$("thesisForm").onsubmit=e=>{ e.preventDefault(); const id=$("editingId").value; const existing=id?investments.find(x=>x.id===id):null; const item={...(existing||{}),id:id||crypto.randomUUID(),ticker:$("ticker").value.trim().toUpperCase(),company:$("company").value.trim(),thesis:$("thesis").value.trim(),breakers:$("breakers").value.trim(),score:Number($("conviction").value),status:existing?.status||"healthy",statusText:existing?.statusText||"Thesis established",lastChecked:existing?.lastChecked||null,lastAnalysis:existing?.lastAnalysis||null,updatedAt:nowISO()}; if(existing) investments=investments.map(x=>x.id===id?item:x); else investments.unshift(item); save(); closeModal("thesisModal"); toast(existing?"Thesis updated.":`${item.ticker} added to watchtower.`,"SAVED"); if(currentResearch?.ticker===item.ticker) renderResearch(currentResearch); };
+$("thesisForm").onsubmit=e=>{ e.preventDefault(); const id=$("editingId").value; const existing=id?investments.find(x=>x.id===id):null; const oldScore=existing?Number(existing.score||0):null; const item={...(existing||{}),id:id||crypto.randomUUID(),ticker:$("ticker").value.trim().toUpperCase(),company:$("company").value.trim(),thesis:$("thesis").value.trim(),breakers:$("breakers").value.trim(),score:Number($("conviction").value),status:existing?.status||"healthy",statusText:existing?.statusText||"Thesis established",lastChecked:existing?.lastChecked||null,lastAnalysis:existing?.lastAnalysis||null,history:Array.isArray(existing?.history)?existing.history:[],updatedAt:nowISO()}; if(existing){ historyEvent(item,{type:'THESIS_EDIT',impact:'UNCHANGED',title:'Thesis edited',summary:'The saved thesis, breakers, or conviction settings were updated.',scoreBefore:oldScore,scoreAfter:Number(item.score)}); investments=investments.map(x=>x.id===id?item:x); } else { historyEvent(item,{type:'THESIS_CREATED',impact:'UNCHANGED',title:'Thesis created',summary:lines(item.thesis)[0]||'Investment thesis initialized.',scoreAfter:Number(item.score)}); investments.unshift(item); } save(); closeModal("thesisModal"); toast(existing?"Thesis updated.":`${item.ticker} added to watchtower.`,"SAVED"); if(currentResearch?.ticker===item.ticker) renderResearch(currentResearch); };
 document.querySelectorAll("[data-close]").forEach(b=>b.onclick=()=>closeModal(b.dataset.close));
 document.querySelectorAll(".chip").forEach(ch=>ch.onclick=()=>{document.querySelectorAll(".chip").forEach(x=>x.classList.remove("active"));ch.classList.add("active");activeFilter=ch.dataset.filter;renderDashboard();});
 $("exportBtn").onclick=exportLibrary; $("libraryExportBtn").onclick=exportLibrary; $("importFile").onchange=e=>e.target.files[0]&&importLibrary(e.target.files[0]);

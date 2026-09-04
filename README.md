@@ -1,3 +1,11 @@
+# ThesisOS — Thesis Memory Build
+
+This build adds the first real **memory layer**: every saved thesis now keeps a chronological event history. Thesis creation/edits, AI thesis checks, and filing-level dissections are recorded with thesis impact, score changes, timestamps, and source links.
+
+The event history is currently stored in browser localStorage with the rest of the thesis library. The next production step is moving users + theses + events into a cloud database so the memory follows the user across devices.
+
+---
+
 # ThesisOS
 ## Core Data upgrade
 
